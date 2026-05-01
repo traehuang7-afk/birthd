@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>生日快乐</title>
+
+<style>
+body{
+    margin:0;
+    height:100vh;
+    overflow:hidden;
+    background:black;
+    color:white;
+    font-family:"Microsoft YaHei";
+    transition:3s;
+}
+
+/* ===== 中心 ===== */
+.center{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+}
+
+/* ===== 蛋糕 ===== */
+.cake{
+    font-size:110px;
+    position:relative;
+}
+
+.candle{
+    position:absolute;
+    top:-40px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:28px;
+    animation:flicker 1s infinite;
+}
+
+@keyframes flicker{
+    0%,100%{opacity:1;}
+    50%{opacity:0.3;}
+}
+
+/* ===== 按钮 ===== */
+button{
+    margin-top:20px;
+    padding:12px 20px;
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+    cursor:pointer;
+    display:none;
+}
+
+/* ===== 提示 ===== */
+#tip{
+    margin-top:15px;
+    font-size:18px;
+    opacity:0.9;
+}
+
+/* ===== 文字（信纸内容）===== */
+#text{
+    color:black;
+    max-width:650px;
+    line-height:1.8;
+    white-space:pre-line;
+    display:none;
+    padding:30px;
+}
+
+/* ===== 信封 ===== */
+#envelope{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.85);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    z-index:10;
+    opacity:0;
+    transition:2s;
+}
+
+.env-box{
+    width:260px;
+    height:160px;
+    background:white;
+    border-radius:10px;
+    cursor:pointer;
+    position:relative;
+    animation:fadeIn 2s forwards;
+}
+
+.env-box:before{
+    content:"💌";
+    font-size:60px;
+    position:absolute;
+    top:45px;
+    left:50%;
+    transform:translateX(-50%);
+}
+
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(30px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+/* ===== 信纸 ===== */
+.paper{
+    background:white;
+    padding:40px;
+    border-radius:10px;
+    max-width:700px;
+}
+
+/* ===== 烟花 ===== */
+canvas{
+    position:fixed;
+    top:0;
+    left:0;
+    pointer-events:none;
+}
+
+/* ===== 爱心 ===== */
+.heart{
+    position:fixed;
+    color:pink;
+    font-size:20px;
+    animation:float 4s linear forwards;
+}
+
+@keyframes float{
+    from{transform:translateY(0);opacity:1;}
+    to{transform:translateY(-600px);opacity:0;}
+}
+</style>
+</head>
+
+<body>
+
+<audio id="music" loop>
+    <source src="https://www.bensound.com/bensound-music/bensound-happybirthday.mp3">
+</audio>
+
+<audio id="blowSound">
+    <source src="https://www.soundjay.com/human/sounds/candle-blow-1.mp3">
+</audio>
+
+<!-- 🎂 -->
+<div class="center">
+    <div class="cake">
+        🎂
+        <div class="candle" id="candle">🕯️</div>
+    </div>
+
+    <div id="tip">请许愿 ✨</div>
+
+    <button id="btn" onclick="blow()">吹灭蜡烛</button>
+</div>
+
+<!-- 💌 信封 -->
+<div id="envelope" onclick="openLetter()">
+    <div class="env-box"></div>
+</div>
+
+<!-- 📜 信纸 -->
+<div class="center">
+    <div class="paper" id="text"></div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const messages=[
+"亲爱的鑫鑫咪 🎂,22岁生日快乐！",
+    "很遗憾今年再一次没能陪在你身边",
+    "所以今天没有办法陪你过生日",
+    "但是我希望能有一个形式能在你的生日中出现一下",
+    "很高兴你的出现，我们一起度过了930天，也一起幸福了930天",
+    "最近我们都陷入了一些困惑，暂且称之为成长的烦恼吧",
+    "但我知道这只是暂时的，我觉得大家都会经历这一阶段，在完全离开学生时代和完全进入社会之间卡着",
+    "但不用担心也不用怀疑自己，你要相信你是很厉害的，北服毕业并且已经找到了一份合适的工作，所以不用考虑别人的薪资或者别人的生活怎么怎么样，你已经很好了",
+    "你足够优秀，足够认真，足够赤诚地去对待你的生活",
+    "你不会安于现状，你会想要提高现在的状态，这一点就足够让你值得也一定会有一个很好的未来",
+    "所以不用担心，一切的闹心都是暂时的",
+    "河水会一直流，无论是被石头阻拦还是蒸发到天空，亦或是进入到别的循环之中，但最后殊途同归都会流向大海",
+    "我们也是一样，生在宇宙，寄宿于大自然下，每个人都有不同，不同的出身，不同的性格，不同的选择",
+    "既然抗拒不了衰老的我们殊途同归，倒不如活得自在些，能在春日享受阳光，能在夏日欣赏绿叶，能在秋日体会黄昏，能在冬日拥抱荒凉",
+    "能接受自己的缺点，也能看见自己的优点，享受当下的每一刻，你还是你，我还是我，这样我想日子慢慢就会好起来",
+    "尴尬期很快就会过去，我们也会越来越好",
+    "PS:最后是许愿环节：",
+    "希望我俩都能够暴富！",
+    "希望我们还能在一起很多很多很多很多很多天",
+    "希望你不止生日快乐，每天都快乐！",
+    "————拉夫u的玮玮咪",
+];
+
+let step=0;
+
+/* ===== 30秒后出现按钮 ===== */
+setTimeout(()=>{
+    document.getElementById("btn").style.display="inline-block";
+    document.getElementById("tip").innerText="可以开始许愿了 💫";
+},10000);
+
+/* ===== 吹灭 ===== */
+function blow(){
+    document.body.style.background="#fff0f5";
+
+    document.getElementById("music").play();
+    document.getElementById("blowSound").play();
+
+    document.getElementById("candle").style.display="none";
+    document.getElementById("btn").style.display="none";
+    document.getElementById("tip").innerText="✨愿望正在实现...";
+
+    startFireworks();
+    heartRain();
+
+    setTimeout(()=>{
+        showEnvelope();
+    },4000);
+}
+
+/* ===== 信封慢慢出现 ===== */
+function showEnvelope(){
+    let env=document.getElementById("envelope");
+    env.style.display="flex";
+
+    setTimeout(()=>{
+        env.style.opacity=1;
+    },300);
+}
+
+/* ===== 打开信 ===== */
+function openLetter(){
+    document.getElementById("envelope").style.display="none";
+
+    let text=document.getElementById("text");
+    text.style.display="block";
+
+    let i=0;
+    text.innerHTML="";
+
+    let t=setInterval(()=>{
+        if(i<messages.length){
+            text.innerHTML+=messages[i]+"\n";
+            i++;
+        }else{
+            clearInterval(t);
+        }
+    },700);
+}
+
+/* ===== 爱心 ===== */
+function heartRain(){
+    setInterval(()=>{
+        let h=document.createElement("div");
+        h.className="heart";
+        h.innerHTML="❤️";
+        h.style.left=Math.random()*100+"vw";
+        h.style.top="100vh";
+        document.body.appendChild(h);
+
+        setTimeout(()=>h.remove(),4000);
+    },300);
+}
+
+/* ===== 烟花 ===== */
+let canvas=document.getElementById("canvas");
+let ctx=canvas.getContext("2d");
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+window.onresize=()=>{
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+};
+
+let particles=[];
+
+function startFireworks(){
+    setInterval(()=>{
+        for(let i=0;i<25;i++){
+            particles.push({
+                x:Math.random()*canvas.width,
+                y:canvas.height,
+                vx:(Math.random()-0.5)*5,
+                vy:Math.random()*-8,
+                life:100
+            });
+        }
+    },800);
+
+    animate();
+}
+
+function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    particles.forEach((p,i)=>{
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.life--;
+
+        ctx.fillStyle="hsl("+Math.random()*360+",100%,60%)";
+        ctx.fillRect(p.x,p.y,3,3);
+
+        if(p.life<=0)particles.splice(i,1);
+    });
+
+    requestAnimationFrame(animate);
+}
+
+</script>
+
+</body>
+</html>
